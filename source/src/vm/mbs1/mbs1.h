@@ -12,6 +12,9 @@
 #ifndef MBS1_H
 #define MBS1_H
 
+//#define CURMPU
+#define NEWMPU
+
 #include "mbs1_defs.h"
 #include "../../common.h"
 #include "registers.h"
@@ -24,6 +27,7 @@ class HD46505;
 class AY38910;
 class YM2203;
 class MC6809;
+class MPUWrap;
 
 class BOARD;
 class PIA;
@@ -93,8 +97,9 @@ protected:
 	AY38910* psg3[2];
 	AY38910* psg9[3];
 	YM2203* fmopn;
-	MC6809* cpu;
-
+	MPUWrap* newmpu;
+	MC6809* curmpu;
+	DEVICE* cpu;
 	BOARD* board;
 	PIA* pia;
 	ACIA* acia;
@@ -375,7 +380,24 @@ public:
 	bool debug_write_reg(uint32_t num, uint32_t reg_num, uint32_t data);
 	void debug_regs_info(uint32_t num, _TCHAR *buffer, size_t buffer_len);
 #endif
-
+	void Switch(bool f);
 };
+
+#ifdef NEWMPU
+#include "device.h"
+class HD6309;
+struct MPUWrap : DEVICE {
+	MPUWrap(VM *vm, EMU *emu, const char *s);
+	~MPUWrap();
+	int run(int clock, int accum, int cycle);
+	void write_signal(int id, uint32_t data, uint32_t mask);
+	void StopTrace();
+	HD6309 *hd6309;
+	bool reset, halt, halt1;
+};
+#endif
+uint32_t memfetch(uint32_t addr);
+uint32_t memread(uint32_t addr);
+void memwrite(uint32_t addr, uint32_t data);
 
 #endif /* MBS1_H */

@@ -43,7 +43,7 @@ private:
 	int wreset_register_id;	// normal reset
 	int preset_register_id;	// power on reset
 
-	DEVICE *d_cpu;
+	DEVICE *d_cpu, *d_cpu2;
 
 // for save config
 #pragma pack(1)
@@ -108,8 +108,9 @@ public:
 	void set_context_halt(DEVICE* device, int id, uint32_t mask) {
 		register_output_signal(&outputs_halt, device, id, mask);
 	}
-	void set_context_cpu(DEVICE *device) {
+	void set_context_cpu(DEVICE *device, DEVICE *device2) {
 		d_cpu = device;
+		d_cpu2 = device2;
 	}
 
 	void save_state(FILEIO *fio);

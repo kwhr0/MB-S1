@@ -561,6 +561,9 @@ void MEMORY::set_igmode(uint32_t data)
 
 void MEMORY::write_data8w(uint32_t addr, uint32_t data, int *wait)
 {
+#if defined(CURMPU) && defined(NEWMPU)
+	if (cp.WriteStart(addr, data)) return;
+#endif
 	addr = address_mapping(addr & 0xffff);
 	addr_seg04 = (addr & 0xff000); // 4KB  block
 	addr_seg16 = (addr & 0xfc000); // 16KB block
@@ -759,7 +762,9 @@ void MEMORY::write_data8w(uint32_t addr, uint32_t data, int *wait)
 uint32_t MEMORY::read_data8w(uint32_t addr, int *wait)
 {
 	uint32_t data;
-
+#if defined(CURMPU) && defined(NEWMPU)
+	if (cp.ReadStart(addr, data)) return data;
+#endif
 	addr = address_mapping(addr & 0xffff);
 	addr_seg04 = (addr & 0xff000); // 4KB  block
 	addr_seg16 = (addr & 0xfc000); // 16KB block
@@ -801,7 +806,7 @@ uint32_t MEMORY::read_data8w(uint32_t addr, int *wait)
 				logging->out_debugf(_T("text r: %05x %02x %c c:%02x"),addr,data,ch,color_reg);
 			}
 #endif
-			return data;
+			goto ret;
 		}
 		// graphic vram
 		if (addr_seg16 == S1_ADDR_VGRAM_START) {
@@ -854,7 +859,7 @@ uint32_t MEMORY::read_data8w(uint32_t addr, int *wait)
 			}
 #endif
 #endif
-			return data;
+			goto ret;
 		}
 		// ig ram (or font rom)
 		if (addr_seg04 == S1_ADDR_IGRAM_BANK1 || addr_seg04 == S1_ADDR_IGRAM_BANK2) {
@@ -875,7 +880,7 @@ uint32_t MEMORY::read_data8w(uint32_t addr, int *wait)
 				// disable ig
 				data = 0xff;
 			}
-			return data;
+			goto ret;
 		}
 		// communication rom
 		if (IOPORT_USE_CM01 && cm01rom_loaded) {
@@ -937,7 +942,58 @@ uint32_t MEMORY::read_data8w(uint32_t addr, int *wait)
 		d_board->write_signal(SIG_CPU_NMI, 0, SIG_NMI_TRAP_MASK);
 		bfxxx_access = false;
 	}
+ret:
+#if defined(CURMPU) && defined(NEWMPU)
+	cp.ReadEnd(data);
+#endif
+	return data;
+}
 
+uint32_t MEMORY::read_data8w_fetch(uint32_t addr, int *wait)
+{
+	uint32_t data;
+#if defined(CURMPU) && defined(NEWMPU)
+	if (cp.ReadStart(addr, data)) return data;
+#endif
+	addr = address_mapping(addr & 0xffff);
+	addr_seg04 = (addr & 0xff000); // 4KB  block
+	addr_seg16 = (addr & 0xfc000); // 16KB block
+	addr_seg32 = (addr & 0xf8000); // 32KB block
+	addr_comio = (addr & 0xeffff);
+
+	if (addr < 0xf0000) {
+		// S1 mode
+		addr_bank = (addr >> S1_BANK_SIZE);
+
+		// if access io port, cpu speed go down to 1MHz
+		//set_s1_cpu_wait(addr, addr_seg04, addr_bank, addr_comio, 0x02, 0x04, wait);
+
+		// trace counter
+		//process_trace_counter(*wait);
+
+#if defined(USE_Z80B_CARD)
+		if (SIG_MBC_IS_ON && addr < 0x80000) {
+			data = 0xff;
+		} else
+#endif
+		{
+			data = s1rbank[addr_bank][addr & ((1 << S1_BANK_SIZE) - 1)];
+		}
+	} else {
+		// L3 mode or upper 0xf0000
+		addr_64kb = (addr & 0xffff);
+		addr_bank = (addr_64kb >> L3_BANK_SIZE);
+
+		// if access io port, cpu speed go down to 1MHz
+		//set_l3_cpu_wait(addr, addr_bank, addr_comio, 0x02, 0x04, wait);
+
+		// trace counter
+		//process_trace_counter(*wait);
+		data = l3rbank[addr_bank][addr & ((1 << L3_BANK_SIZE) - 1)];
+	}
+#if defined(CURMPU) && defined(NEWMPU)
+	cp.ReadEnd(data);
+#endif
 	return data;
 }
 
@@ -1268,22 +1324,21 @@ void MEMORY::clear_trace_counter(int clk)
 }
 
 /// memory mapping
-uint32_t MEMORY::address_mapping(uint32_t addr)
+uint32_t MEMORY::address_mapping(uint16_t addr)
 {
 	if (NOW_S1_MODE) {
 		// S1 mode
 		if (NOW_SYSTEM_MODE && (addr & 0xe000) == 0xe000) {
 			// system mode
-			addr = ((addr & 0x0fff) | ((addr & 0xf000) == 0xf000 ? 0xef000 : 0x84000));
+			return (addr & 0x0fff) | ((addr & 0xf000) == 0xf000 ? 0xef000 : 0x84000);
 		} else {
 			// mapping
-			addr = ((addr & 0x0fff) | (addr_map[REG_ADDRSEG][(addr & 0xf000) >> 12] << 12));
+			return (addr & 0x0fff) | addr_map[REG_ADDRSEG][addr >> 12] << 12;
 		}
 	} else {
 		// L3 mode
-		addr |= 0xf0000;
+		return addr | 0xf0000;
 	}
-	return addr;
 }
 
 /// system <-> user mode

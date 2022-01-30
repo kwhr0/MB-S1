@@ -50,7 +50,7 @@
 // macosx
 #include <AvailabilityMacros.h>
 
-#define USE_REC_VIDEO
+//#define USE_REC_VIDEO
 #define USE_REC_VIDEO_AVKIT		0x01
 #if !defined(MAC_OS_X_VERSION_10_13)
 #define USE_REC_VIDEO_QTKIT		0x02
@@ -58,7 +58,7 @@
 #define USE_REC_VIDEO_FFMPEG	1
 #define USE_CAP_SCREEN_COCOA		1
 
-#define USE_REC_AUDIO
+//#define USE_REC_AUDIO
 #define USE_REC_AUDIO_WAVE
 #define USE_REC_AUDIO_AVKIT		0x10
 #define USE_REC_AUDIO_FFMPEG	2

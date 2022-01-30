@@ -882,6 +882,8 @@ bool EMU::create_blank_floppy_disk(const _TCHAR* file_path, uint8_t type)
 #endif
 
 #ifdef USE_DATAREC
+#include <sys/stat.h>
+extern time_t gDataTime;
 bool EMU::play_datarec(const _TCHAR* file_path)
 {
 	bool rc = false;
@@ -890,6 +892,9 @@ bool EMU::play_datarec(const _TCHAR* file_path)
 		if (vm->play_datarec(file_path)) {
 			config.recent_datarec_path.Update(file_path, 0);
 			config.opened_datarec_path.Set(file_path, 0);
+			struct stat st;
+			stat(file_path, &st);
+			gDataTime = st.st_mtimespec.tv_sec;
 			rc = true;
 		} else {
 			logging->out_log_x(LOG_ERROR, CMsg::Tape_image_couldn_t_be_opened);

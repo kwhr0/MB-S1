@@ -32,7 +32,8 @@ void BOARD::reset()
 	now_wreset = 0;
 	cancel_my_event(wreset_register_id);
 	cancel_my_event(preset_register_id);
-	d_cpu->write_signal(SIG_CPU_RESET, 1, 1);
+	if (d_cpu) d_cpu->write_signal(SIG_CPU_RESET, 1, 1);
+	if (d_cpu2) d_cpu2->write_signal(SIG_CPU_RESET, 1, 1);
 	register_event(this, SIG_BOARD_PRESET_RELEASE, 400000, false, &preset_register_id);
 }
 
@@ -163,7 +164,14 @@ void BOARD::event_callback(int event_id, int err)
 		wreset_register_id = -1;
 	}
 	else if (event_id == SIG_BOARD_PRESET_RELEASE) {
+#ifdef CURMPU
+		vm->Switch(false);
 		d_cpu->write_signal(SIG_CPU_RESET, 0, 1);
+#endif
+#ifdef NEWMPU
+		vm->Switch(true);
+		d_cpu2->write_signal(SIG_CPU_RESET, 0, 1);
+#endif
 		preset_register_id = -1;
 	}
 }

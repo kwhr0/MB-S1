@@ -34,6 +34,12 @@
 #import "../../utility.h"
 #import <SDL_syswm.h>
 
+#ifdef USE_DATAREC
+#import "emumsg.h"
+#import <sys/stat.h>
+time_t gDataTime;
+#endif
+
 extern EMU *emu;
 
 static NSWindow *get_main_window()
@@ -502,12 +508,16 @@ static NSWindow *get_main_window()
 #endif
 - (void)ChangeUseOpenGL:(id)sender
 {
+#ifdef USE_OPENGL
 	int num = [sender num];
 	gui->ChangeUseOpenGL(num);
+#endif
 }
 - (void)ChangeOpenGLFilter:(id)sender
 {
+#ifdef USE_OPENGL
 	gui->ChangeOpenGLFilter(-1);
+#endif
 }
 
 // Sound
@@ -913,6 +923,7 @@ static NSWindow *get_main_window()
 			state = NSOnState;
 		}
 #endif
+#ifdef USE_OPENGL
 	} else if (act == @selector(ChangeUseOpenGL:)) {
 		int num = [menuItem num];
 		if (gui->GetOpenGLMode() == num) {
@@ -923,6 +934,7 @@ static NSWindow *get_main_window()
 		if (gui->GetOpenGLFilter() == num) {
 			state = NSOnState;
 		}
+#endif
 	} else if (act == @selector(ShowRecordAudioDialog:)) {
 		if (gui->NowRecordingVideo() | gui->NowRecordingSound()) {
 			state = NSOnState;
@@ -1322,8 +1334,11 @@ void GUI::setup_menu(void)
 	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x1:recv:@selector(CPUPower:):0:1:'1'];
 	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x2:recv:@selector(CPUPower:):0:2:'2'];
 	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x4:recv:@selector(CPUPower:):0:3:'3'];
-	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x8:recv:@selector(CPUPower:):0:4:'4' ];
+	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x8:recv:@selector(CPUPower:):0:4:'4'];
 	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x16:recv:@selector(CPUPower:):0:5:'5'];
+	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x32:recv:@selector(CPUPower:):0:6:'6'];
+	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x64:recv:@selector(CPUPower:):0:7:'7'];
+	[cpuSpeedMenu add_menu_item_by_id:CMsg::CPU_x128:recv:@selector(CPUPower:):0:8:'8'];
 	[cpuSpeedMenu addItem:[NSMenuItem separatorItem]];
 	[cpuSpeedMenu add_menu_item_by_id:CMsg::Sync_With_CPU_Speed:recv:@selector(ToggleSyncIRQ:):0:0:'0'];
 	[controlMenu add_sub_menu_by_id:cpuSpeedMenu:CMsg::CPU_Speed];
@@ -2228,9 +2243,9 @@ void translate_apple_menu(void)
 		NSMenuItem *item = [items objectAtIndex:(NSUInteger)i];
 		if ([item isSeparatorItem]) continue;
 		if ([[item keyEquivalent] isEqual: @"q"]) {
-			const unichar c[2] = { NSF4FunctionKey, 0 };
-			[item setKeyEquivalent:[NSString stringWithCharacters:c length:1]];
-			[item setKeyEquivalentModifierMask:NSAlternateKeyMask];
+			//const unichar c[2] = { NSF4FunctionKey, 0 };
+			//[item setKeyEquivalent:[NSString stringWithCharacters:c length:1]];
+			//[item setKeyEquivalentModifierMask:NSAlternateKeyMask];
 		} else {
 			[item setKeyEquivalent:@""];
 		}
@@ -2255,6 +2270,17 @@ void translate_apple_menu(void)
 - (void)windowDidBecomeKey:(NSNotification *)aNotification
 {
 	if (parentObject != nil) [parentObject windowDidBecomeKey:aNotification];
+#ifdef USE_DATAREC
+	if (gDataTime && config.recent_datarec_path.Count()) {
+		const char *path = config.recent_datarec_path[0]->path.Get();
+		struct stat st;
+		if (!stat(path, &st) && gDataTime < st.st_mtimespec.tv_sec) {
+			gDataTime = st.st_mtimespec.tv_sec;
+			emumsg.Send(EMUMSG_ID_PLAY_DATAREC, path);
+			NSLog(@"ready to load: %s", path);
+		}
+	}
+#endif
 }
 - (void)windowDidResignKey:(NSNotification *)aNotification
 {

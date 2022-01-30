@@ -205,6 +205,7 @@ extern GUI *gui;
 	[hbox addControl:lbl];
 	[box_view addSubview:lbl];
 
+#ifdef USE_OPENGL
 	popUseOpenGL = [CocoaPopUpButton createI:LABELS::opengl_use action:nil selidx:config.use_opengl];
 	[hbox addControl:popUseOpenGL];
 	[box_view addSubview:popUseOpenGL];
@@ -218,6 +219,7 @@ extern GUI *gui;
 	popGLFilter = [CocoaPopUpButton createI:LABELS::opengl_filter action:nil selidx:config.gl_filter_type];
 	[hbox addControl:popGLFilter];
 	[box_view addSubview:popGLFilter];
+#endif
 
 	[tab_view addSubview:box];
 
@@ -862,9 +864,11 @@ extern GUI *gui;
 	emu->set_parami(VM::ParamIOPort, val);
 #endif
 
+#ifdef USE_OPENGL
 //	emu->set_parami(VM::ParamUseOpenGL, (int)[popUseOpenGL indexOfSelectedItem]);
 	config.use_opengl = (int)[popUseOpenGL indexOfSelectedItem];
 	config.gl_filter_type = [popGLFilter indexOfSelectedItem];
+#endif
 
 	config.led_pos = [popLEDPosition indexOfSelectedItem];
 	config.capture_type = [popCaptureType indexOfSelectedItem];
@@ -976,7 +980,9 @@ extern GUI *gui;
 	gui->ChangeLedBox((int)[popLEDShow indexOfSelectedItem]);
 	gui->ChangeLedBoxPosition(config.led_pos);
 	config.save();
+#ifdef USE_OPENGL
 	emu->change_opengl_attr();
+#endif
 
 	emu->update_config();
 

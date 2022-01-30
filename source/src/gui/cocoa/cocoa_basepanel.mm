@@ -23,7 +23,7 @@ extern EMU *emu;
 {
 	NSFont *font = [ctrl font];
 
-	NSTextStorage *textStorage = [[NSTextStorage alloc] initWithString:self];
+	NSTextStorage *textStorage = [[NSTextStorage alloc] initWithString:@""];
 	NSTextContainer *textContainer = [[NSTextContainer alloc] initWithContainerSize:constraint];
 
 	NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];

@@ -130,6 +130,18 @@ msgstr "CPU 8倍"
 msgid "CPU x16"
 msgstr "CPU 16倍"
 
+#: src/msgs.cpp:55
+msgid "CPU x32"
+msgstr "CPU 32倍"
+
+#: src/msgs.cpp:55
+msgid "CPU x64"
+msgstr "CPU 64倍"
+
+#: src/msgs.cpp:55
+msgid "CPU x128"
+msgstr "CPU 128倍"
+
 #: src/msgs.cpp:56 src/res/windows/mbs1_gui.rc:161
 msgid "CPU x0.5\tAlt+9"
 msgstr "CPU 0.5倍\tAlt+9"
@@ -153,6 +165,18 @@ msgstr "CPU 8倍\tAlt+4"
 #: src/msgs.cpp:61 src/res/windows/mbs1_gui.rc:166
 msgid "CPU x16\tAlt+5"
 msgstr "CPU 16倍\tAlt+5"
+
+#: src/msgs.cpp:61 src/res/windows/mbs1_gui.rc:166
+msgid "CPU x32\tAlt+6"
+msgstr "CPU 32倍\tAlt+6"
+
+#: src/msgs.cpp:61 src/res/windows/mbs1_gui.rc:166
+msgid "CPU x64\tAlt+7"
+msgstr "CPU 64倍\tAlt+7"
+
+#: src/msgs.cpp:61 src/res/windows/mbs1_gui.rc:166
+msgid "CPU x128\tAlt+8"
+msgstr "CPU 128倍\tAlt+8"
 
 #: src/msgs.cpp:62
 #, c-format

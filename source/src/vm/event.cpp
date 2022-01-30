@@ -71,7 +71,7 @@ EVENT::EVENT(VM* parent_vm, EMU* parent_emu, char* identifier)
 void EVENT::initialize()
 {
 	// load config
-	if(!(0 <= config.cpu_power && config.cpu_power <= 5)) {
+	if(!(0 <= config.cpu_power && config.cpu_power <= 8)) {
 		config.cpu_power = 1;
 	}
 
@@ -146,7 +146,8 @@ void EVENT::initialize_sound(int rate, int samples)
 
 void EVENT::set_context_cpu(DEVICE* device, int clocks)
 {
-	int index = dcount_cpu++;
+	int index = 0;//dcount_cpu++;
+	dcount_cpu = 1;
 #ifdef _DEBUG
 	assert(index < MAX_CPU);
 #endif
@@ -325,7 +326,18 @@ void EVENT::drive(int split_num)
 #endif
 						{
 #ifdef USE_CPU_REAL_MACHINE_CYCLE
+#ifdef CURMPU
+#ifdef NEWMPU
+							vm->Switch(false);
+#endif
 							cpu_done_tmp = d_cpu[0].device->run(-1, (event_clocks % CLOCKS_CYCLE), cpu_speed_half + 1);
+#endif
+#ifdef NEWMPU
+#ifdef CURMPU
+							vm->Switch(true);
+#endif
+							cpu_done_tmp = d_cpu[0].device->run(-1, (event_clocks % CLOCKS_CYCLE), cpu_speed_half + 1);
+#endif
 #else
 							cpu_done_tmp = d_cpu[0].device->run(-1);
 #endif

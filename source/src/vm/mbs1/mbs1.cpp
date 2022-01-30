@@ -18,7 +18,12 @@
 #include "../hd46505.h"
 #include "../ay38910.h"
 #include "../ym2203.h"
+#ifdef NEWMPU
+#include "HD6309.h"
+#endif
+#ifdef CURMPU
 #include "../mc6809.h"
+#endif
 
 #include "board.h"
 #include "../pia.h"
@@ -66,6 +71,9 @@ const int fmopn_clocks[] = {
 	CLOCKS_1MHZ * 4,	// 4MHz
 	-1
 };
+
+static MEMORY *sMemory;
+static int sICount;
 
 // ----------------------------------------------------------------------------
 // initialize
@@ -134,14 +142,19 @@ VM::VM(EMU* parent_emu) : emu(parent_emu)
 #endif
 
 	//
-	cpu = new MC6809(this, emu, NULL);
+#ifdef NEWMPU
+	cpu = newmpu = new MPUWrap(this, emu, NULL);
+#endif
+#ifdef CURMPU
+	cpu = curmpu = new MC6809(this, emu, NULL);
+#endif
 
 #ifdef USE_KEY_RECORD
 	reckey = new KEYRECORD(emu);
 #endif
 
 	// set contexts
-	event->set_context_cpu(cpu, CPU_CLOCKS);
+//	event->set_context_cpu(cpu, CPU_CLOCKS);
 #if defined(USE_Z80B_CARD)
 	event->set_context_cpu(z80, Z80B_CLOCKS);
 #endif
@@ -187,7 +200,7 @@ VM::VM(EMU* parent_emu) : emu(parent_emu)
 	display->set_crtc_vsync_ptr(crtc->get_vs_start_ptr(), crtc->get_vs_end_ptr());
 
 	// keyboard
-	key->set_context_cpu(cpu);
+//	key->set_context_cpu(cpu);
 	key->set_context_disp(display);
 	key->set_context_board(board);
 #ifdef USE_KEY_RECORD
@@ -241,7 +254,13 @@ VM::VM(EMU* parent_emu) : emu(parent_emu)
 	memory->set_font(display->get_font());
 
 	// cpu bus
-	cpu->set_context_mem(memory);
+#ifdef NEWMPU
+	sMemory = memory;
+	memory->cp.setmpu(newmpu);
+#endif
+#ifdef CURMPU
+	curmpu->set_context_mem(memory);
+#endif
 #if defined(USE_Z80B_CARD)
 	z80->set_context_mem(z80b_card);
 	z80->set_context_io(z80b_card);
@@ -389,19 +408,39 @@ VM::VM(EMU* parent_emu) : emu(parent_emu)
 //	board->set_context_reset(z80, SIG_CPU_RESET, 1);
 #endif
 	// send reset to cpu at last
-	board->set_context_reset(cpu, SIG_CPU_RESET, 1);
-
+#ifdef NEWMPU
+	board->set_context_reset(newmpu, SIG_CPU_RESET, 1);
 	// nmi signal
-	board->set_context_nmi(cpu, SIG_CPU_NMI, 0xffffffff);
+	board->set_context_nmi(newmpu, SIG_CPU_NMI, 0xffffffff);
 	// irq signal
-	board->set_context_irq(cpu, SIG_CPU_IRQ, 0xffffffff);
+	board->set_context_irq(newmpu, SIG_CPU_IRQ, 0xffffffff);
 	// firq signal
-	board->set_context_firq(cpu, SIG_CPU_FIRQ, 0xffffffff);
+	board->set_context_firq(newmpu, SIG_CPU_FIRQ, 0xffffffff);
 	// halt signal
-	board->set_context_halt(cpu, SIG_CPU_HALT, 0xffffffff);
-
-	board->set_context_cpu(cpu);
-
+	board->set_context_halt(newmpu, SIG_CPU_HALT, 0xffffffff);
+#endif
+#ifdef CURMPU
+	board->set_context_reset(curmpu, SIG_CPU_RESET, 1);
+	// nmi signal
+	board->set_context_nmi(curmpu, SIG_CPU_NMI, 0xffffffff);
+	// irq signal
+	board->set_context_irq(curmpu, SIG_CPU_IRQ, 0xffffffff);
+	// firq signal
+	board->set_context_firq(curmpu, SIG_CPU_FIRQ, 0xffffffff);
+	// halt signal
+	board->set_context_halt(curmpu, SIG_CPU_HALT, 0xffffffff);
+#endif
+#if defined(CURMPU) && !defined(NEWMPU)
+	board->set_context_cpu(curmpu, nullptr);
+	Switch(false);
+#elif !defined(CURMPU) && defined(NEWMPU)
+	board->set_context_cpu(nullptr, newmpu);
+	Switch(true);
+#else
+	board->set_context_cpu(curmpu, newmpu);
+	Switch(false);
+#endif
+	
 	// initialize all devices
 	for(DEVICE* device = first_device; device; device = device->get_next_device()) {
 		if(device->get_id() != event->get_id()) {
@@ -458,6 +497,14 @@ void VM::reset()
 
 	// reset all devices
 	for(DEVICE* device = first_device; device; device = device->get_next_device()) {
+#ifdef CURMPU
+		if (typeid(*device) == typeid(MC6809)) Switch(false);
+		else
+#endif
+#ifdef NEWMPU
+		if (typeid(*device) == typeid(HD6309)) Switch(true);
+		else
+#endif
 		device->reset();
 	}
 
@@ -1454,3 +1501,66 @@ void VM::stop_reckey(bool stop_play, bool stop_record)
 }
 #endif
 
+
+
+void VM::Switch(bool f) {
+	cpu = f ? (DEVICE *)newmpu : (DEVICE *)curmpu;
+	event->set_context_cpu(cpu, CPU_CLOCKS);
+	key->set_context_cpu(cpu);
+	memory->cp.setCompare(f);
+}
+
+#ifdef NEWMPU
+MPUWrap::MPUWrap(VM *vm, EMU *emu, const char *s) : DEVICE(vm, emu, s), reset(false), halt(false), halt1(false) {
+	hd6309 = new HD6309;
+}
+MPUWrap::~MPUWrap() {
+	delete hd6309;
+}
+int MPUWrap::run(int clock, int accum, int cycle) {
+	int r = reset || halt ? 1 : hd6309->Execute(0);
+	halt = halt1;
+	return r;
+}
+void MPUWrap::write_signal(int id, uint32_t data, uint32_t mask) {
+	if (data & mask)
+		switch (id) {
+			case SIG_CPU_RESET:
+				reset = true;
+				break;
+			case SIG_CPU_HALT:
+				halt1 = true;
+				break;
+			case SIG_CPU_NMI:
+				hd6309->NMI();
+				break;
+			case SIG_CPU_FIRQ:
+				hd6309->FIRQ();
+				break;
+			case SIG_CPU_IRQ:
+				hd6309->IRQ();
+				break;
+		}
+	else if (reset && id == SIG_CPU_RESET) {
+		hd6309->Reset();
+		reset = false;
+	}
+	else if (halt && id == SIG_CPU_HALT)
+		halt = halt1 = false;
+}
+void MPUWrap::StopTrace() {
+#if HD6309_TRACE
+	hd6309->StopTrace();
+#endif
+}
+#endif
+
+uint32_t memfetch(uint32_t addr) {
+	return sMemory->read_data8w_fetch(addr, &sICount);
+}
+uint32_t memread(uint32_t addr) {
+	return sMemory->read_data8w(addr, &sICount);
+}
+void memwrite(uint32_t addr, uint32_t data) {
+	sMemory->write_data8w(addr, data, &sICount);
+}

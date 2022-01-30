@@ -627,7 +627,7 @@ bool REC_VIDEO::SavePNG(int type, CSurface *surface, CTchar &file_name)
 #if defined(USE_CAP_SCREEN_WIN)
 	return winvideo->Capture(type, surface, file_name.GetWM());
 #elif defined(USE_CAP_SCREEN_COCOA)
-	return cocvideo->Capture(type, surface, file_name.GetN());
+	return false;//cocvideo->Capture(type, surface, file_name.GetN());
 #elif defined(USE_CAP_SCREEN_LIBPNG)
 	// fill alpha channel
 	surface->Fill(0xffffffff, surface->GetPixelFormat().Amask);

@@ -471,7 +471,7 @@ bool Config::load_ini_file(const _TCHAR *ini_file)
 	}
 
 	valuel = ini->GetLongValue(SECTION_CONTROL, _T("CpuPower"), cpu_power);
-	if (0 <= valuel && valuel <= 5) {
+	if (0 <= valuel && valuel <= 8) {
 		cpu_power = (uint8_t)valuel;
 	}
 	now_power_off = ini->GetBoolValue(SECTION_CONTROL, _T("NowPowerOff"), now_power_off);

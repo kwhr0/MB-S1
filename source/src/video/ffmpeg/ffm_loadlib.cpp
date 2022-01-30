@@ -8,7 +8,7 @@
 	@brief [ load ffmpeg library ]
 */
 
-#include "ffm_loadlib.h"
+//#include "ffm_loadlib.h"
 
 #if defined(USE_REC_VIDEO_FFMPEG) || defined(USE_REC_AUDIO_FFMPEG)
 

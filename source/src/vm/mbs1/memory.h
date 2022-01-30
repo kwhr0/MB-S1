@@ -14,6 +14,8 @@
 
 #include "../vm_defs.h"
 #include "../device.h"
+#include "CompareProcess.h"
+#include "mbs1.h"
 
 class EMU;
 #if defined(USE_Z80B_CARD)
@@ -32,6 +34,7 @@ class L3Basic;
 #define S1_BANK_SIZE	11	///< 2Kbytes
 #define L3_BANK_SIZE	4	///< 16bytes
 
+class MPUWrap;
 
 /**
 	@brief Memory access
@@ -252,6 +255,7 @@ public:
 	void release();
 	void write_data8w(uint32_t addr, uint32_t data, int *wait);
 	uint32_t read_data8w(uint32_t addr, int *wait);
+	uint32_t read_data8w_fetch(uint32_t addr, int *wait);
 	void latch_address(uint32_t addr, int *wait);
 
 //	void write_data16(uint32_t addr, uint32_t data) {
@@ -363,7 +367,7 @@ public:
 		font = val;
 	}
 
-	uint32_t address_mapping(uint32_t addr);
+	uint32_t address_mapping(uint16_t addr);
 
 //	void event_callback(int event_id, int err);
 	void update_config();
@@ -419,9 +423,15 @@ public:
 	void debug_basic_error(DebuggerConsole *dc, int num);
 
 	bool debug_basic_check_break_point(uint32_t line, int len);
-
 #endif
-
+	struct CP : CompareProcess {
+		CP() : mpu(nullptr) {}
+#ifdef NEWMPU
+		void Stop() { if (mpu) mpu->StopTrace(); }
+#endif
+		void setmpu(MPUWrap *m) { mpu = m; }
+		MPUWrap *mpu;
+	} cp;
 };
 
 #endif /* MEMORY_H */
