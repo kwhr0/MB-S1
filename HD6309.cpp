@@ -43,19 +43,19 @@ enum {
 #define fsub8(x, y, z)	(fp->dm = N8 | Z8 | VSUB8 | CSUB8, fp->b = (x), fp->s = (y), fp->a = (z), fmnt())
 #define fsub16(x, y, z)	(fp->dm = N16 | Z16 | VSUB16 | CSUB16, fp->b = (x), fp->s = (y), fp->a = (z), fmnt())
 #define fmul(x)			(fp->dm = Z16 | CMUL, fp->a = (x), fmnt())
-#define fdiv(x, y)		(fp->dm = N8 | Z8 | VB | CDIV, fp->b = (y), fp->a = (x), fmnt())
-#define fdiv16(x, y)	(fp->dm = N16 | Z16 | VB | CDIV, fp->b = (y), fp->a = (x), fmnt())
+#define fdiv(x, y)		(fp->dm = N8 | Z8 | VB | CDIV, fp->b = (x), fp->a = (y), fmnt())
+#define fdiv16(x, y)	(fp->dm = N16 | Z16 | VB | CDIV, fp->b = (x), fp->a = (y), fmnt())
 #define fdivro()		(fp->dm = N0 | Z0 | V1 | C0, fmnt())
-#define fleft8(x)		(fp->dm = N8 | Z8 | VLEFT8 | CLEFT8, fp->a = (x), fmnt())
-#define fleft16(x)		(fp->dm = N16 | Z16 | VLEFT16 | CLEFT16, fp->a = (x), fmnt())
-#define fright8(x, y)	(fp->dm = N8 | Z8 | CB, fp->b = (y), fp->a = (x), fmnt())
-#define fright16(x, y)	(fp->dm = N16 | Z16 | CB, fp->b = (y), fp->a = (x), fmnt())
+#define fleft8(x, y)	(fp->dm = N8 | Z8 | VLEFT8 | CLEFT8, fp->b = (x), fp->a = (y), fmnt())
+#define fleft16(x, y)	(fp->dm = N16 | Z16 | VLEFT16 | CLEFT16, fp->b = (x), fp->a = (y), fmnt())
+#define fright8(x, y)	(fp->dm = N8 | Z8 | CB, fp->b = (x), fp->a = (y), fmnt())
+#define fright16(x, y)	(fp->dm = N16 | Z16 | CB, fp->b = (x), fp->a = (y), fmnt())
 #define finc8(x, y)		(fp->dm = N8 | Z8 | VADD8, fp->b = (x), fp->s = 0, fp->a = (y), fmnt())
 #define finc16(x, y)	(fp->dm = N16 | Z16 | VADD16, fp->b = (x), fp->s = 0, fp->a = (y), fmnt())
 #define fdec8(x, y)		(fp->dm = N8 | Z8 | VSUB8, fp->b = (x), fp->s = 0, fp->a = (y), fmnt())
 #define fdec16(x, y)	(fp->dm = N16 | Z16 | VSUB16, fp->b = (x), fp->s = 0, fp->a = (y), fmnt())
-#define fneg8(x)		(fp->dm = N8 | Z8 | V8 | C8, fp->b = 0, fp->s = (x), fp->a = (x), fmnt())
-#define fneg16(x)		(fp->dm = N16 | Z16 | V16 | C16, fp->b = 0, fp->s = (x), fp->a = (x), fmnt())
+#define fneg8(x)		(fp->dm = N8 | Z8 | V8 | C8, fp->a = (x), fmnt())
+#define fneg16(x)		(fp->dm = N16 | Z16 | V16 | C16, fp->a = (x), fmnt())
 #define fcom8(x)		(fp->dm = N8 | Z8 | V0 | C1, fp->a = (x), fmnt())
 #define fcom16(x)		(fp->dm = N16 | Z16 | V0 | C1, fp->a = (x), fmnt())
 #define fdaa(x, y)		(fp->dm = N8 | Z8 | CADD8, fp->b = (x), fp->a = (y), fmnt())
@@ -217,11 +217,11 @@ uint16_t HD6309::ea() { // indexed addressing
 		case 0x5: adr = (int8_t)B + ir(); CLOCK(1); break;
 		case 0x6: adr = (int8_t)A + ir(); CLOCK(1); break;
 		case 0x7: adr = (int8_t)E + ir(); CLOCK(1); break;
-		case 0x8: adr = ir() + ((int8_t)imm8() << 8 >> 8); break;
+		case 0x8: adr = ir() + (int8_t)imm8(); break;
 		case 0x9: adr = ir() + imm16(); CLOCK(1); break;
 		case 0xa: adr = (int8_t)F + ir(); CLOCK(1); break;
 		case 0xb: adr = D + ir(); CLOCK(2); break;
-		case 0xc: adr = (int8_t)imm8() << 8 >> 8; adr += PC; break;
+		case 0xc: adr = (int8_t)imm8(); adr += PC; break;
 		case 0xd: adr = imm16(); adr += PC; CLOCK(1); break;
 		case 0xe: adr = W + ir(); CLOCK(2); break;
 		default: // 0 or 0xf
@@ -384,17 +384,17 @@ int HD6309::Execute(int n) {
 		PC = ld16(vec);
 	};
 	// instructions
-	auto add8 = [&](uint8_t &d, uint8_t s) { int t = d + s; fadd8(d, s, t); d = t; };
-	auto add16 = [&](uint16_t &d, uint16_t s) { int t = d + s; fadd16(d, s, t); d = t; };
-	auto adc8 = [&](uint8_t &d, uint8_t s) { int t = d + s + CY; fadd8(d, s, t); d = t; };
-	auto adc16 = [&](uint16_t &d, uint16_t s) { int t = d + s + CY; fadd16(d, s, t); d = t; };
-	auto sub8 = [&](uint8_t &d, uint8_t s) { int t = d - s; fsub8(d, s, t); d = t; };
-	auto sub16 = [&](uint16_t &d, uint16_t s) { int t = d - s; fsub16(d, s, t); d = t; };
-	auto sbc8 = [&](uint8_t &d, uint8_t s) { int t = d - s - CY; fsub8(d, s, t); d = t; };
-	auto sbc16 = [&](uint16_t &d, uint16_t s) { int t = d - s - CY; fsub16(d, s, t); d = t; };
+	auto add8 = [&](uint8_t &d, uint8_t s) { fadd8(d, s, d += s); };
+	auto add16 = [&](uint16_t &d, uint16_t s) { fadd16(d, s, d += s); };
+	auto adc8 = [&](uint8_t &d, uint8_t s) { fadd8(d, s, d += s + CY); };
+	auto adc16 = [&](uint16_t &d, uint16_t s) { fadd16(d, s, d += s + CY); };
+	auto sub8 = [&](uint8_t &d, uint8_t s) { fsub8(d, s, d -= s); };
+	auto sub16 = [&](uint16_t &d, uint16_t s) { fsub16(d, s, d -= s); };
+	auto sbc8 = [&](uint8_t &d, uint8_t s) { fsub8(d, s, d -= s + CY); };
+	auto sbc16 = [&](uint16_t &d, uint16_t s) { fsub16(d, s, d -= s + CY); };
 	auto cmp8 = [&](uint8_t d, uint8_t s) { fsub8(d, s, d - s); };
 	auto cmp16 = [&](uint16_t d, uint16_t s) { fsub16(d, s, d - s); };
-	auto muld = [&](int16_t s) { int t = (int16_t)D * s; fnz16(D = t >> 16); W = t; };
+	auto muld = [&](int16_t s) { int32_t t = (int16_t)D * s; fnz16(D = t >> 16); W = t; };
 	auto divd = [&](int8_t s) {
 		if (!s) {
 			md |= 0x80;
@@ -410,7 +410,7 @@ int HD6309::Execute(int n) {
 		int v = t != (int8_t)t;
 		A = (int16_t)D % s;
 		B = t;
-		fdiv(B, -v);
+		fdiv(-v, B);
 		CLOCK(-v);
 	};
 	auto divq = [&](int16_t s) {
@@ -428,12 +428,12 @@ int HD6309::Execute(int n) {
 		int v = t != (int16_t)t;
 		D = d % s;
 		W = t;
-		fdiv16(W, -v);
+		fdiv16(-v, W);
 		CLOCK(-v);
 	};
-	auto incm = [&](uint16_t a) { int t = ld8(a); finc8(t, t + 1); st8(a, t + 1); };
-	auto decm = [&](uint16_t a) { int t = ld8(a); fdec8(t, t - 1); st8(a, t - 1); };
-	auto negm = [&](uint16_t a) { int t = -ld8(a); fneg8(t); st8(a, t); };
+	auto incm = [&](uint16_t a) { uint8_t t = ld8(a); finc8(t, ++t); st8(a, t); };
+	auto decm = [&](uint16_t a) { uint8_t t = ld8(a); fdec8(t, --t); st8(a, t); };
+	auto negm = [&](uint16_t a) { uint8_t t = -ld8(a); fneg8(t); st8(a, t); };
 	auto clrm = [&](uint16_t a) { st8(a, 0); fclr(); };
 	auto tstm = [&](uint16_t a) { fmov8(ld8(a)); };
 	auto and8 = [&](uint8_t &d, uint8_t s) { fmov8(d &= s); };
@@ -442,23 +442,23 @@ int HD6309::Execute(int n) {
 	auto or16 = [&](uint16_t &d, uint16_t s) { fmov16(d |= s); };
 	auto eor8 = [&](uint8_t &d, uint8_t s) { fmov8(d ^= s); };
 	auto eor16 = [&](uint16_t &d, uint16_t s) { fmov16(d ^= s); };
-	auto comm = [&](uint16_t a) { int t = ~ld8(a); fcom8(t); st8(a, t); };
-	auto lsl = [&](uint8_t &r) { int t = r << 1; fleft8(t); r = t; };
-	auto lsr = [&](uint8_t &r) { int cy = r; fright8(r >>= 1, cy); };
-	auto asr = [&](uint8_t &r) { int cy = r; fright8(r = (int8_t)r >> 1, cy); };
-	auto rol = [&](uint8_t &r) { int t = r << 1 | CY; fleft8(t); r = t; };
-	auto ror = [&](uint8_t &r) { int cy = r; fright8(r = r >> 1 | CY << 7, cy); };
-	auto lslm = [&](uint16_t a) { int t = ld8(a) << 1; fleft8(t); st8(a, t); };
-	auto lsrm = [&](uint16_t a) { uint8_t t = ld8(a), cy = t; fright8(t >>= 1, cy); st8(a, t); };
-	auto asrm = [&](uint16_t a) { int8_t t = ld8(a), cy = t; fright8(t >>= 1, cy); st8(a, t); };
-	auto rolm = [&](uint16_t a) { int t = ld8(a) << 1 | CY; fleft8(t); st8(a, t); };
-	auto rorm = [&](uint16_t a) { int t = ld8(a), cy = t; fright8(t = t >> 1 | CY << 7, cy); st8(a, t); };
+	auto comm = [&](uint16_t a) { uint8_t t = ~ld8(a); fcom8(t); st8(a, t); };
+	auto lsl = [&](uint8_t &r) { fleft8(r, r <<= 1); };
+	auto lsr = [&](uint8_t &r) { fright8(r, r >>= 1); };
+	auto asr = [&](uint8_t &r) { fright8(r, r = (int8_t)r >> 1); };
+	auto rol = [&](uint8_t &r) { fleft8(r, r = r << 1 | CY); };
+	auto ror = [&](uint8_t &r) { fright8(r, r = r >> 1 | CY << 7); };
+	auto lslm = [&](uint16_t a) { uint8_t t = ld8(a); fleft8(t, t <<= 1); st8(a, t); };
+	auto lsrm = [&](uint16_t a) { uint8_t t = ld8(a); fright8(t, t >>= 1); st8(a, t); };
+	auto asrm = [&](uint16_t a) { int8_t t = ld8(a); fright8(t, t >>= 1); st8(a, t); };
+	auto rolm = [&](uint16_t a) { uint8_t t = ld8(a); fleft8(t, t = t << 1 | CY); st8(a, t); };
+	auto rorm = [&](uint16_t a) { uint8_t t = ld8(a); fright8(t, t = t >> 1 | CY << 7); st8(a, t); };
 	auto jsr = [&](uint16_t a) { st16r(S -= 2, PC); PC = a; };
 	auto ldq = [&](uint32_t s) { fmov16(D = s >> 16); W = s; };
 	auto stq = [&](uint16_t a) { fmov16(D); st16(a, D); st16(a + 2, W); };
-	auto aim = [&](uint8_t m, uint16_t a) { int t = ld8(a) & m; fmov8(t); st8(a, t); };
-	auto oim = [&](uint8_t m, uint16_t a) { int t = ld8(a) | m; fmov8(t); st8(a, t); };
-	auto eim = [&](uint8_t m, uint16_t a) { int t = ld8(a) ^ m; fmov8(t); st8(a, t); };
+	auto aim = [&](uint8_t m, uint16_t a) { fmov8(m &= ld8(a)); st8(a, m); };
+	auto oim = [&](uint8_t m, uint16_t a) { fmov8(m |= ld8(a)); st8(a, m); };
+	auto eim = [&](uint8_t m, uint16_t a) { fmov8(m ^= ld8(a)); st8(a, m); };
 	auto tim = [&](uint8_t m, uint16_t a) { fmov8(ld8(a) & m); };
 	auto tfm = [&](int s, int d) {
 		int sel = imm8();
@@ -522,8 +522,8 @@ int HD6309::Execute(int n) {
 		tracep->r[5] = PC;
 		tracep->index = tracep->opn = 0;
 #endif
-		int32_t tmp;
-		int8_t t8;
+		int32_t t32;
+		int8_t t8, t;
 		int16_t t16;
 		uint8_t op;
 		switch (op = imm8()) {
@@ -547,15 +547,14 @@ int HD6309::Execute(int n) {
 					case 0x0f: clrm(da()); break;
 					case 0x12: break; // nop
 					case 0x13: waitflags |= W_SYNC; PC--; break;
-					case 0x14: fnz16(W); D = (int16_t)W < 0 ? -1 : 0; break;
+					case 0x14: fnz16(D = (int16_t)W >> 15); break;
 					case 0x16: t16 = imm16(); PC += t16; break;
 					case 0x17: t16 = imm16(); st16r(S -= 2, PC); PC += t16; break;
 					case 0x19: // daa
-						tmp = A;
-						if (CY || (A & 0xf0) > 0x90 || ((A & 0xf0) > 0x80 && (A & 0xf) > 9)) tmp += 0x60;
-						if (ResolvH() || (A & 0xf) > 9) tmp += 6;
-						fdaa(A, tmp);
-						A = tmp;
+						t8 = A;
+						if (CY || (A & 0xf0) > 0x90 || ((A & 0xf0) > 0x80 && (A & 0xf) > 9)) t8 += 0x60;
+						if (ResolvH() || (A & 0xf) > 9) t8 += 6;
+						fdaa(A, A = t8);
 						break;
 					case 0x1a: SetupFlags(ResolvFlags() | imm8()); break;
 					case 0x1c: SetupFlags(ResolvFlags() & imm8()); break;
@@ -602,7 +601,7 @@ int HD6309::Execute(int n) {
 						break;
 					case 0x3d: fmul(D = A * B); break;
 					case 0x3f: trap(0xfffa, 0xff, MI | MF); break; // swi
-					case 0x40: tmp = -A; fneg8(tmp); A = tmp; break;
+					case 0x40: fneg8(A = -A); break;
 					case 0x43: fcom8(A = ~A); break;
 					case 0x44: lsr(A); break;
 					case 0x46: ror(A); break;
@@ -613,7 +612,7 @@ int HD6309::Execute(int n) {
 					case 0x4c: finc8(A, ++A); break;
 					case 0x4d: fmov8(A); break;
 					case 0x4f: A = 0; fclr(); break;
-					case 0x50: tmp = -B; fneg8(tmp); B = tmp; break;
+					case 0x50: fneg8(B = -B); break;
 					case 0x53: fcom8(B = ~B); break;
 					case 0x54: lsr(B); break;
 					case 0x56: ror(B); break;
@@ -730,7 +729,7 @@ int HD6309::Execute(int n) {
 					case 0xca: or8(B, imm8()); break;
 					case 0xcb: add8(B, imm8()); break;
 					case 0xcc: fmov16(D = imm16()); break;
-					case 0xcd: tmp = imm16() << 16; ldq(tmp | imm16()); break;
+					case 0xcd: t32 = imm16() << 16; ldq(t32 | imm16()); break;
 					case 0xce: fmov16(U = imm16()); break;
 					case 0xd0: sub8(B, ld8(da())); break;
 					case 0xd1: cmp8(B, ld8(da())); break;
@@ -814,21 +813,21 @@ int HD6309::Execute(int n) {
 					case 0x3a: st16r(U -= 2, W); break;
 					case 0x3b: W = ld16(U); U += 2; break;
 					case 0x3f: trap(0xfff4); break; // swi2
-					case 0x40: tmp = -D; fneg16(tmp); D = tmp; break;
+					case 0x40: fneg16(D = -D); break;
 					case 0x43: fcom16(D = ~D); break;
-					case 0x44: t16 = D; fright16(D >>= 1, t16); break;
-					case 0x46: t16 = D; fright16(D = D >> 1 | CY << 15, t16); break;
-					case 0x47: t16 = D; fright16(D = (int16_t)D >> 1, t16); break;
-					case 0x48: D = tmp = D << 1; fleft16(tmp); break;
-					case 0x49: D = tmp = D << 1 | CY; fleft16(tmp); break;
+					case 0x44: fright16(D, D >>= 1); break;
+					case 0x46: fright16(D, D = D >> 1 | CY << 15); break;
+					case 0x47: fright16(D, D = (int16_t)D >> 1); break;
+					case 0x48: fleft16(D, D <<= 1); break;
+					case 0x49: fleft16(D, D = D << 1 | CY); break;
 					case 0x4a: fdec16(D, --D); break;
 					case 0x4c: finc16(D, ++D); break;
 					case 0x4d: fmov16(D); break;
 					case 0x4f: D = 0; fclr(); break;
 					case 0x53: fcom16(W = ~W); break;
-					case 0x54: t16 = W; fright16(W >>= 1, t16); break;
-					case 0x56: t16 = W; fright16(W = W >> 1 | CY << 15, t16); break;
-					case 0x59: W = tmp = W << 1 | CY; fleft16(tmp); break;
+					case 0x54: fright16(W, W >>= 1); break;
+					case 0x56: fright16(W, W = W >> 1 | CY << 15); break;
+					case 0x59: fleft16(W, W = W << 1 | CY); break;
 					case 0x5a: fdec16(W, --W); break;
 					case 0x5c: finc16(W, ++W); break;
 					case 0x5d: fmov16(W); break;
@@ -921,12 +920,12 @@ int HD6309::Execute(int n) {
 						t8 = imm8();
 						t16 = da();
 						switch (t8 & 0xc0) {
-							case 0: tmp = ResolvFlags(); break;
-							case 0x40: tmp = A; break;
-							case 0x80: tmp = B; break;
-							default: tmp = 0; break;
+							case 0: t = ResolvFlags(); break;
+							case 0x40: t = A; break;
+							case 0x80: t = B; break;
+							default: t = 0; break;
 						}
-						st8(t16, (ld8(t16) & ~(1 << (t8 & 7))) | (tmp >> (t8 >> 3 & 7) & 1) << (t8 & 7));
+						st8(t16, (ld8(t16) & ~(1 << (t8 & 7))) | (t >> (t8 >> 3 & 7) & 1) << (t8 & 7));
 						break;
 					case 0x38: tfm(1, 1); break;
 					case 0x39: tfm(-1, -1); break;
@@ -1038,7 +1037,7 @@ int HD6309::ResolvC() {
 		case F8:
 			return (p->a & 0xff) != 0;
 		case F16:
-			return (p->a & 0xffff) != 0;
+			return p->a != 0;
 		case FADD8:
 			return ((p->s & p->b) | (~p->a & p->b) | (p->s & ~p->a)) >> 7 & MC;
 		case FSUB8:
@@ -1048,13 +1047,13 @@ int HD6309::ResolvC() {
 		case FSUB16:
 			return ((p->s & ~p->b) | (p->a & ~p->b) | (p->s & p->a)) >> 15 & MC;
 		case FMUL:
-			return (p->a >> 7 & 1) << LC;
+			return p->a >> 7 & 1;
 		case FDIV:
-			return (p->a & 1) << LC;
+			return p->a & 1;
 		case FLEFT8:
-			return (p->a >> 8 & 1) << LC;
+			return p->b >> 7 & 1;
 		case FLEFT16:
-			return (p->a >> 16 & 1) << LC;
+			return p->b >> 15;
 		default:
 			error();
 			break;
@@ -1076,9 +1075,9 @@ int HD6309::ResolvV() {
 		case FB:
 			return p->b & MV;
 		case F8:
-			return (p->a & 0xff) == 0x80 << LV;
+			return ((p->a & 0xff) == 0x80) << LV;
 		case F16:
-			return (p->a & 0xffff) == 0x8000 << LV;
+			return (p->a == 0x8000) << LV;
 		case FADD8:
 			return ((p->b & p->s & ~p->a) | (~p->b & ~p->s & p->a)) >> (7 - LV) & MV;
 		case FSUB8:
@@ -1088,9 +1087,9 @@ int HD6309::ResolvV() {
 		case FSUB16:
 			return ((p->b & ~p->s & ~p->a) | (~p->b & p->s & p->a)) >> (15 - LV) & MV;
 		case FLEFT8:
-			return ((p->a >> 7 ^ p->a >> 8) & 1) << LV;
+			return ((p->b >> 6 ^ p->b >> 7) & 1) << LV;
 		case FLEFT16:
-			return ((p->a >> 15 ^ p->a >> 16) & 1) << LV;
+			return ((p->b >> 14 ^ p->b >> 15) & 1) << LV;
 		default:
 			error();
 			break;
@@ -1114,7 +1113,7 @@ int HD6309::ResolvZ() {
 		case F8:
 			return !(p->a & 0xff) << LZ;
 		case F16:
-			return !(p->a & 0xffff) << LZ;
+			return !p->a << LZ;
 		default:
 			error();
 			break;
